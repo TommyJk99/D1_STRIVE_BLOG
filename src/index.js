@@ -2,11 +2,14 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import list from "express-list-endpoints";
+import apiRouter from "./routers/apiRouter.js";
 
 dotenv.config();
 
 const server = express();
 const port = 3030;
+
+server.use("/api", apiRouter);
 
 mongoose
   .connect(process.env.MONGO_URL)

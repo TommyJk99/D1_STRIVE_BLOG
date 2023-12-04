@@ -179,7 +179,9 @@ userRouter.get("/", async (req, res, next) => {
     next(error);
   }
 });
-
+/*NB: async viene utilizzato perchè User.find() è una funzione asincrona
+next serve a far si che l'applicazione non si blocchi  in caso di errore
+*/
 export default userRouter;
 ```
 
@@ -243,6 +245,42 @@ userRouter.delete("/:id", async (req, res, next) => {
     next(error);
   }
 });
+```
+
+- questo codice definisce uno <b>schema Mongoose</b> per un modello chiamato Author, che rappresenta gli autori in un'applicazione. Gli autori sono rappresentati come documenti in una collezione chiamata "authors", e ogni autore ha campi come name, lastname, age, email, birthday, e avatar. Il modello Mongoose Author fornisce un'interfaccia per effettuare operazioni CRUD (Create, Read, Update, Delete) sulla collezione di autori nel database MongoDB:
+
+```js
+import mongoose, { Schema } from "mongoose";
+
+const AuthorSchema = new Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  lastname: {
+    type: String,
+    required: true,
+  },
+  age: {
+    type: Number,
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+  },
+  birthday: {
+    type: String,
+    required: true,
+  },
+  avatar: {
+    type: String,
+    required: true,
+  },
+});
+
+export const Author = mongoose.model("authors", AuthorSchema);
+// La stringa "authors" è il nome della collezione nel DB!!
 ```
 
 - se voglio utilizare variabili d'ambiente è utile scaricare il pacchetto `dotenv` che andrà importato all'inizio del mio file principale nel seguente modo:
