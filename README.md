@@ -229,6 +229,21 @@ userRouter.post("/", async (req, res, next) => {
 export default userRouter;
 ```
 
+- In questo esempio modifico gli attributi di un utente:
+
+```js
+userRouter.put("/:id", async (req, res, next) => {
+  try {
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    res.json(updatedUser);
+  } catch (error) {
+    next(error);
+  }
+});
+```
+
 - In questo esempio elimino un utente:
 
 ```js
