@@ -1,8 +1,11 @@
 import express from "express";
 import { Author } from "../modules/authors.js";
+import { checkAuth } from "../middlewares/checkAuth.js";
 
 const authorsRouter = express.Router();
+
 authorsRouter.use(express.json()); //non riusciva a leggermi il body dell req, questo risolve
+authorsRouter.use(checkAuth);
 
 authorsRouter.get("/", async (req, res, next) => {
   try {

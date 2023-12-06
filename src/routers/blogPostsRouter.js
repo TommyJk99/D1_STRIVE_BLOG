@@ -1,5 +1,6 @@
 import express from "express";
 import { BlogPost } from "../modules/blogPosts.js";
+import { checkAuth } from "../middlewares/checkAuth.js";
 
 const blogPostsRouter = express.Router();
 
@@ -29,6 +30,8 @@ blogPostsRouter.get("/:id", async (req, res, next) => {
     next(err);
   }
 });
+
+blogPostsRouter.use(checkAuth);
 
 blogPostsRouter.post("/", async (req, res, next) => {
   try {
