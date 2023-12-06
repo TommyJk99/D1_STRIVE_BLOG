@@ -3,41 +3,41 @@ import mongoose, { Schema } from "mongoose";
 const blogPostsSchema = new Schema({
   category: {
     type: String,
-    require: true,
+    required: true,
   },
   title: {
     type: String,
-    require: true,
+    required: true,
   },
   cover: {
     type: String,
-    require: true,
+    required: true,
   },
   readTime: {
     value: {
       type: Number,
-      require: true,
+      required: true,
     },
     unit: {
       type: String,
-      require: true,
+      required: true,
     },
   },
 
   author: {
     name: {
       type: String,
-      require: true,
+      required: true,
     },
     avatar: {
       type: String,
-      require: true,
+      required: true,
     },
   },
 
   content: {
     type: String,
-    require: true,
+    required: true,
   },
 });
 
