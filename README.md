@@ -1,3 +1,22 @@
+# Indice
+
+- [Express](#express)
+  - [Inizializzazione](#middleware-di-errore-più-complesso-con-spunti-interessanti)
+  - [Routing](#cose-utili-per-il-routing)
+  - [Tenere traccia delle rotte](#tenere-traccia-delle-rotte)
+  - [Middlewares](#middlewares)
+  - [Pagination](#pagination)
+- [MongoDB Atlas](#mongodb-atlas)
+  - [Queries](#queries)
+  - [Queries su MDB Compass](#utilizzo-queries-su-mongodb-compass)
+  - [Selettori](#lista-dei-possibili-query-selectors)
+- [Mongoose (con Express)](#mongoose-con-express)
+  - [index.js](#collegarsi-al-db-tramite-mongoose-indexjs)
+  - [Esempi CRUD](#esempi-crud)
+  - [Schemi e modelli](#schemi-e-modelli)
+  - [Variabili d'ambiente](#utilizzo-variabili-dambiente)
+- [Altro](#altro)
+
 # Express
 
 ## Inizializziamo una repo vuota
@@ -279,6 +298,56 @@ export const errorMiddleware = (err, req, res, next) => {
 - Logga l'errore per eventuali azioni di troubleshooting o logging personalizzate.
 - Invia una risposta JSON al client con il codice di stato e il messaggio appropriati.
 
+## Pagination
+
+### Limit e skip
+
+Per ottimizzare le richieste o per scopi di struttura, è possibile includere specifiche query nell'URL per cercare solo determinati prodotti e iniziare dalla posizione desiderata nel database. Ad esempio, con l'URL `http://localhost:3030/api/products/?limit=10&skip=2`, una richiesta GET restituirà dieci prodotti a partire dal terzo elemento nel database. Nel codice Express fornito, le variabili limit e skip vengono estratte dalla query dell'URL e utilizzate per limitare il numero di risultati restituiti e specificare da quale punto iniziare nella raccolta di dati.
+
+```js
+//Esempio sort, limit, skip
+.get("/", async (req, res, next) => {
+    try {
+      const { limit, skip } = req.query;
+      const products = await Product.find({})
+      .sort({price: "ascending"});
+      .limit(limit)
+      .skip(skip)
+      //restituisce 10 elementi a partire dal terzo, ordinati per prezzo crescente
+      res.json(products);
+    } catch (err) {
+      next(err);
+    }
+  })
+```
+
+### Sort
+
+Utilizzando l'URL `http://localhost:3030/api/products/?limit=10&skip=2`, la richiesta otterrà 10 oggetti dal database, ordinati dal prezzo più basso al più alto. È importante notare che <u>l'ordinamento non si applica solo ai primi 10 elementi del database, ma coinvolge l'intero set di dati</u> corrispondente alla query. In altre parole, il database esegue prima l'ordinamento completo e successivamente restituisce i 10 elementi richiesti, a partire dal terzo oggetto in base all'ordinamento effettuato.
+
+### Esempio con ricerca per chiave generica
+
+```js
+//Altro esempio sort, limit, skip con chiave dinamica
+.get("/", async (req, res, next) => {
+    try {
+        const { limit, skip, sortBy, order } = req.query;
+        const products = await Product.find({})
+            .sort({ [sortBy]: order })
+            .limit(limit)
+            .skip(skip);
+        // Le parentesi quadre indicano che sortBy è una chiave dinamica!
+        // Restituisce un numero specifico di elementi a partire da una posizione specifica, ordinati in base alle specifiche richieste.
+        res.json(products);
+    } catch (err) {
+        next(err);
+    }
+});
+
+```
+
+Questo codice utilizza i parametri `sortBy` e `order` dalla query per consentire un ordinamento flessibile dei risultati di ricerca. Ad esempio, è possibile ordinare i prodotti per prezzo, nome o qualsiasi altro campo specificato dinamicamente. Nel codice precedente invece, l'ordinamento è fisso sul campo "price" in ordine crescente, senza la possibilità di variare il campo di ordinamento o l'ordine risultante. Un ipotetico URL per sfruttare appieno il codice può essere: `http://localhost:3030/api/products/?limit=10&sortBy=price&order=ascending`
+
 # MongoDB Atlas
 
 - creazione di un'utenza
@@ -287,7 +356,330 @@ export const errorMiddleware = (err, req, res, next) => {
 - creazione di una o piu collezioni
 - creazione di multipli documenti
 
-# Mongoose
+## Queries
+
+Le queries in MongoDB sono come istruzioni specializzate che usiamo per comunicare con il database. Attraverso queste istruzioni, possiamo eseguire operazioni di lettura, scrittura e manipolazione dei dati. Le queries ci permettono di cercare informazioni specifiche, aggiornare o inserire nuovi dati nel database secondo criteri definiti. Inoltre, offrono opzioni per ordinare i risultati, limitare la quantità di dati restituiti e proiettare solo le informazioni necessarie.
+
+### Esempi queries:
+
+### 1. Lettura di tutti i documenti
+
+```js
+db.collection("nomi").find({});
+```
+
+### 2. Filtraggio in base ad un criterio ($gt greater than)
+
+```js
+db.collection("prodotti").find({ prezzo: { $gt: 100 } });
+```
+
+### 3. Visualizzare solo alcuni campi (chiave valore)
+
+```js
+db.collection("utenti").find({}, { nome: 1, email: 1 });
+```
+
+### 4. Ordinamento dei risultati per un campo specifico:
+
+```js
+db.collection("libri").find().sort({ titolo: 1 });
+```
+
+### 5. Limitazione del numero di risultati restituiti:
+
+```js
+db.collection("film").find().limit(5);
+```
+
+### 6. Inserimento di un nuovo documento:
+
+```js
+db.collection("utenti").insertOne({ nome: "Mario", età: 25, email: "mario@example.com" });
+```
+
+### 7. Aggiornamento di un documento esistente
+
+```js
+db.collection("prodotti").updateOne({ nome: "Prodotto1" }, { $set: { prezzo: 150 } });
+```
+
+### 8. Eliminazione di documenti in base a un criterio:
+
+```js
+db.collection("messaggi").deleteMany({ letto: true });
+```
+
+### 9. Lettura di documenti con un operatore logico
+
+```js
+db.collection("ordini").find({
+  $and: [{ stato: "in attesa" }, { totale: { $gt: 1000 } }],
+});
+```
+
+### 10. Utilizzo di operatori di confronto multipli
+
+```js
+db.collection("studenti").find({
+  $or: [{ età: { $lt: 18 } }, { voti: { $gt: 90 } }],
+});
+```
+
+## Utilizzo queries su mongoDB Compass
+
+All'interno di mongoDB Compass le queries si scriveranno in questo modo:
+
+```cpp
+{ price: { $gte: 100 }}
+
+//restituisce gli oggetti con prezzo maggiore o uguale di 100
+```
+
+```cpp
+{ $or: [{ price: { $lt: 200 } }, { number: { $gt: 1200 } }] }
+
+//restituisce gli oggetti con 'price' minore di 200 e quelli con 'number' maggiore di 1200
+```
+
+```cpp
+{ $and: [{ price: { $gte: 100 } }, { price: { $lte: 200 } }] }
+
+//restituisce i prodotti con 'price' compreso tra 100 e 200 (con estremi compresi)
+```
+
+```cpp
+{ $and: [{ eyeColor: { $ne: "green" }}, {eyeColor: { $ne: "blue" } }] }
+
+//restituisce gli eyeColor con colori diversi da 'green' e 'blue'
+```
+
+## Esempi di utilizzo delle queries con Mongoose
+
+### Esempio 1 (cerco oggetti nel DB in un range di prezzo)
+
+```js
+productsRouter.get("/", async (req, res, next) => {
+  try {
+    const { limit, skip, sortBy, order } = req.query;
+    const products = await Product.find({
+      $and: [{ price: { $gte: 100 } }, { price: { $lte: 600 } }],
+    })
+      // .select("name - id") -> metodo  utilizzato per specificare i campi di un documento che voglio inclusi o esclusi (preceduti da -) dalla query risultante.
+      .sort({ [sortBy]: order })
+      .limit(limit)
+      .skip(skip);
+    res.json(products);
+  } catch (err) {
+    next(err);
+  }
+});
+```
+
+Ipotiziamo che l'URL abbia questa forma: <br>`http://localhost:3030/api/products?limit=10&skip=0&sortBy=price&order=ascending`
+
+Questo frammento di codice rappresenta una route per gestire richieste HTTP GET all'endpoint "/api/products/". Estrae i parametri di query, come limit, skip, sortBy e order. Effettua una query al database per recuperare i prodotti con prezzi compresi tra 100 e 600, ordinati (per 'price' crescente) e limitati secondo i parametri forniti (limit = 10 e skip = 0). La risposta è inviata come JSON al client. In particolare:
+
+1. per prima cosa vengono recuperati i parametri di query dalla richiesta ( limit, skip, sortBy e order)
+2. poi mongoose interroga il database il quale viene ordinato per prezzo crescente (ascending)
+3. successivamente (sempre grazie a mongoose) vengono selezionati i primi 10 elementi con prezzo compreso tra 100 e 600.
+4. vengono inviate le risposte al client in formato JSON
+
+### Una versione più curata e complessa dell'esempio 1
+
+Ci sono alcuni punti che si possono ottimizzare per migliorare la flessibilità e la robustezza del codice:
+
+1. <b>Validazione dei Parametri di Query</b>: è importante validare parametri di query per evitare errori o potenziali problemi di sicurezza (come injection attacks).
+
+2. <b>Gestione Predefinita dei Parametri</b>: se limit, skip, sortBy, o order non sono forniti, potresti voler impostare dei valori predefiniti.
+
+3. <b>Conversione dei Tipi di Dati</b>: Assicurati che i parametri come limit e skip siano convertiti nei tipi di dati appropriati (ad esempio, numeri).
+
+4. <b>Flessibilità nel Filtro dei Prezzi</b>: Potresti voler rendere i filtri sui prezzi opzionali o configurabili attraverso la query.
+
+Consideriamo il seguente URL per fare la richiestra get: <br>
+`http://localhost:3030/api/products?minPrice=100&maxPrice=500&limit=5&skip=0&sortBy=price&order=asc`
+
+```js
+productsRouter.get("/", async (req, res, next) => {
+  try {
+    // Estrai i parametri di query e imposta i valori predefiniti
+    let { limit = 10, skip = 0, sortBy = "createdAt", order = "asc" } = req.query;
+
+    // Converti limit e skip in numeri e verifica che siano positivi
+    limit = Math.max(parseInt(limit, 10), 1); // Imposta un limite minimo di 1
+    skip = Math.max(parseInt(skip, 10), 0); // Evita valori negativi per skip
+
+    // Verifica che sortBy e order siano valori accettabili
+    const allowedSortFields = ["createdAt", "price"]; // Aggiungi qui eventuali altri campi consentiti
+    const allowedOrders = ["asc", "desc"];
+    if (!allowedSortFields.includes(sortBy)) sortBy = "createdAt";
+    if (!allowedOrders.includes(order)) order = "asc";
+
+    // Opzioni di filtro per il prezzo
+    const priceFilter = {};
+    if (req.query.minPrice) priceFilter.price = { ...priceFilter.price, $gte: parseInt(req.query.minPrice, 10) };
+    if (req.query.maxPrice) priceFilter.price = { ...priceFilter.price, $lte: parseInt(req.query.maxPrice, 10) };
+
+    // Costruisci e esegui la query
+    const query = Product.find(priceFilter)
+      .sort({ [sortBy]: order })
+      .limit(limit)
+      .skip(skip);
+
+    const products = await query;
+
+    // Invia la risposta
+    res.json(products);
+  } catch (err) {
+    // Gestione degli errori
+    next(err);
+  }
+});
+//della serie: se voglio complicarmi la vita posso benissimo riuscirci
+```
+
+### Altre divagazioni sull'esempio 1
+
+```js
+const priceFilter = {};
+if (req.query.minPrice) priceFilter.price = { ...priceFilter.price, $gte: parseInt(req.query.minPrice, 10) };
+if (req.query.maxPrice) priceFilter.price = { ...priceFilter.price, $lte: parseInt(req.query.maxPrice, 10) };
+/*il valore 10 nel parseInt serve a controllare che il valore minimo e massimo venga interpretato
+nel sistema decimale*/
+```
+
+Cosa fa in particolare questa parte di codice? Per capirne la struttura vediamo come si comporta `priceFilter` a seconda di cosa gli diamo in pasto:
+
+1. se NON vengono forniti minPrice e maxPrice all'interno dell'URL, priceFilter rimarrà un oggetto vuoto:
+
+```js
+const priceFilter = {};
+```
+
+2. se viene fornito solo `minPrice`, priceFilter includerà una condizione `$gte`:
+
+```js
+// URL: ?minPrice=100
+const priceFilter = {
+  price: { $gte: 100 },
+};
+```
+
+3. se viene fornito solo `maxPrice`, priceFilter includerà una condizione `$lte`
+
+```js
+// URL: ?maxPrice=500
+const priceFilter = {
+  price: { $lte: 500 },
+};
+```
+
+4. Se vengono forniti entrambi, priceFilter includerà sia la condizione `$gte` che `$lte`:
+
+```js
+// Es: minPrice=100, maxPrice=500
+// URL: ?minPrice=100&maxPrice=500
+const priceFilter = {
+  price: { $gte: 100, $lte: 500 },
+};
+```
+
+INFINE a rigor di cronaca, posso rendere il codice ANCORA più robusto:
+
+```js
+productsRouter.get("/", async (req, res, next) => {
+  try {
+    // Estrai i parametri di query con validazione e sanificazione
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = parseInt(req.query.skip, 10) || 0;
+    const sortBy = req.query.sortBy || "createdAt";
+    const order = req.query.order || "asc";
+
+    // Imposta limiti e valori predefiniti
+    const safeLimit = Math.min(Math.max(limit, 1), 100); // Minimo 1, massimo 100
+    const safeSkip = Math.max(skip, 0);
+
+    // Convalida sortBy e order
+    const allowedSortFields = ["createdAt", "price"];
+    const allowedOrders = ["asc", "desc"];
+    const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
+    const safeOrder = allowedOrders.includes(order) ? order : "asc";
+
+    // Opzioni di filtro per il prezzo con validazione
+    const priceFilter = {};
+    if (req.query.minPrice) {
+      const minPrice = parseInt(req.query.minPrice, 10);
+      if (!isNaN(minPrice)) priceFilter.price = { ...priceFilter.price, $gte: minPrice };
+    }
+    if (req.query.maxPrice) {
+      const maxPrice = parseInt(req.query.maxPrice, 10);
+      if (!isNaN(maxPrice)) priceFilter.price = { ...priceFilter.price, $lte: maxPrice };
+    }
+
+    // Costruisci e esegui la query
+    const query = Product.find(priceFilter)
+      .sort({ [safeSortBy]: safeOrder })
+      .limit(safeLimit)
+      .skip(safeSkip);
+
+    const products = await query;
+
+    // Invia la risposta
+    res.json(products);
+  } catch (err) {
+    // Gestione degli errori migliorata
+    console.error(err); // Log dell'errore per il debug
+    res.status(500).send("Si è verificato un errore nel server");
+  }
+});
+//è un po' too much al momento quindi per ora ciccia, anche se ci sono spunti interessanti
+```
+
+## Potenziali vulnerabilità e soluzioni
+
+A che vulnerabilità è sottoposto questo codice?
+
+```js
+productsRouter.get("/", async (req, res, next) => {
+  try {
+    const { limit, skip, sortBy, order } = req.query;
+    const products = await Product.find({
+      $and: [{ price: { $gte: 100 } }, { price: { $lte: 600 } }],
+    })
+      .sort({ [sortBy]: order })
+      .limit(limit)
+      .skip(skip);
+    res.json(products);
+  } catch (err) {
+    next(err);
+  }
+});
+```
+
+Il codice presentato offre diverse potenziali aree di vulnerabilità che un attaccante potrebbe cercare di sfruttare. Ecco alcune tecniche di attacco comuni:
+
+## Lista dei possibili Query Selectors
+
+`Seq` 👉 Matches values that are equal to a specified value.
+
+`Sgt` 👉 Matches values that are greater than a specified value.
+
+`Sgte` 👉 Matches values that are greater than or equal to a specified value.
+
+`Sin` 👉 Matches any of the values specified in an array.
+
+`$lt` 👉 Matches values that are less than a specified value.
+
+`§lte` 👉 Matches values that are less than or equal to a specified value.
+
+`Sne` 👉 Matches all values that are not equal to a specified value.
+
+`Snin` 👉 Matches none of the values specified in on array.
+
+Questi sono solo alcuni dei possibili Query selectors. La lista completa si può trovare al seguente link: <link>https://www.mongodb.com/docs/manual/reference/operator/query/</link>
+
+# Mongoose (con Express)
 
 Come leggere MongoDB tramite Mongoose dentro la nostra applicazione scritta con Express?
 
@@ -322,7 +714,42 @@ Come leggere MongoDB tramite Mongoose dentro la nostra applicazione scritta con 
     await newUser.save(); // salva il documento in modo persistente su DB
     ```
 
-## ALCUNI ESEMPI:
+## Collegarsi al DB tramite mongoose (index.js)
+
+Questa è una possibile configurazione con la quale tramite mongoose mi connetto al DB:
+
+```js
+import express from "express";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import list from "express-list-endpoints";
+import apiRouter from "./routers/apiRouter.js";
+import { genericError } from "./middlewares/genericError.js";
+
+dotenv.config();
+
+const server = express();
+const port = 3030;
+
+server.use("/api", apiRouter);
+server.use(genericError);
+
+mongoose
+  .connect(process.env.MONGO_URL)
+  .then(() => {
+    server.listen(port, () => {
+      console.log("😎 Listening at port:", port);
+      console.log(list(server));
+    });
+  })
+  .catch(() => {
+    console.log("Errore nella connessione al DB");
+  });
+```
+
+## Esempi CRUD:
+
+### Esempio chiamate GET (ricerca con find)
 
 - Nell'esempio sottostante ad una chiamata GET all'URL `...api/users/` il server (MongoDB) riponderà con un array (poichè uso la funzione map su un array di oggetti) contenente il nome di tutti gli utenti.
 
@@ -348,7 +775,9 @@ next serve a far si che l'applicazione non si blocchi  in caso di errore
 export default userRouter;
 ```
 
-- In quest'altro esempio la route è configurata per rispondere a richieste GET su un percorso che include un parametro dinamico :id. Ad esempio, se l'URL è "/api/users/123", il valore di id sarà "123".
+### Esempio chiamata GET (ricerca per id)
+
+- In quest'altro esempio la route è configurata per rispondere a richieste GET su un percorso che include un parametro dinamico `:id`. Ad esempio, se l'URL è `"/api/users/123"`, il valore di id sarà "123".
 
 ```js
 userRouter.get("/:id", async (req, res, next) => {
@@ -373,6 +802,8 @@ userRouter.get("/:id", async (req, res, next) => {
 });
 ```
 
+### Esempio chiamata POST
+
 - In questo esempio vado a creare un nuovo utente tramite una richiesta POST:
 
 ```js
@@ -392,6 +823,8 @@ userRouter.post("/", async (req, res, next) => {
 export default userRouter;
 ```
 
+### Esempio chiamata PUT
+
 - In questo esempio modifico gli attributi di un utente:
 
 ```js
@@ -406,6 +839,8 @@ userRouter.put("/:id", async (req, res, next) => {
   }
 });
 ```
+
+### Esempio chiamata DELETE
 
 - In questo esempio elimino un utente:
 
@@ -424,6 +859,8 @@ userRouter.delete("/:id", async (req, res, next) => {
   }
 });
 ```
+
+## Schemi e modelli
 
 - questo codice definisce uno <b>schema Mongoose</b> per un modello chiamato Author, che rappresenta gli autori in un'applicazione. Gli autori sono rappresentati come documenti in una collezione chiamata "authors", e ogni autore ha campi come name, lastname, age, email, birthday, e avatar. Il modello Mongoose Author fornisce un'interfaccia per effettuare operazioni CRUD (Create, Read, Update, Delete) sulla collezione di autori nel database MongoDB:
 
@@ -460,6 +897,26 @@ const AuthorSchema = new Schema({
 export const Author = mongoose.model("authors", AuthorSchema);
 // La stringa "authors" è il nome della collezione nel DB!!
 ```
+
+- In sintesi, lo schema definisce la struttura dei dati, mentre il modello fornisce metodi per interagire con i dati nel database in modo specifico per quella struttura.
+
+⚠️ ATTENZIONE: la struttura della funzione mongoose.model è:
+
+```js
+mongoose.model(name, schema, collection, skipInit);
+//name -> nome del modello
+//schema -> lo schema associato a quel modello
+//collection -> il nome della collezione nel dataabse
+//skipInit -> serve a saltare l'inizializzzazione del modello
+```
+
+Ora, focalizziamoci su cosa succede quando fornisco solo i primi due parametri (name e schema come nell'esempio precedente):
+
+- Se fornisco solo il nome del modello e lo schema, Mongoose assegnerà automaticamente il nome della collezione. Questo nome sarà una versione al plurale e in minuscolo del nome del modello. Ad esempio, se il nome del modello è Author, Mongoose cercherà (o creerà, se non esiste) una collezione chiamata authors.
+
+- Inoltre se la collezione specificata (o dedotta) non esiste già nel database, Mongoose la creerà automaticamente quando inserirai il primo documento in quella collezione.
+
+## Utilizzo variabili d'ambiente
 
 - se voglio utilizare variabili d'ambiente è utile scaricare il pacchetto `dotenv` che andrà importato all'inizio del mio file principale nel seguente modo:
 
